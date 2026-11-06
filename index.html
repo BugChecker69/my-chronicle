@@ -1,1 +1,71 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>my-chronicle - わたしの履歴書</title>
+  <link rel="stylesheet" href="style.css">
+  <!-- Exif解析ライブラリ (CDN) -->
+  <script src="https://cdn.jsdelivr.net/npm/exifr/dist/full.umd.js"></script>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>my-chronicle</h1>
+      <p class="subtitle">わたしの履歴書・記憶復元年表</p>
+    </header>
 
+    <!-- 入力フォームエリア -->
+    <section class="card input-section">
+      <div class="form-row">
+        <div class="form-group">
+          <label for="userName">氏名</label>
+          <input type="text" id="userName" placeholder="例: 山田 太郎">
+        </div>
+        <div class="form-group">
+          <label for="birthDate">生年月日</label>
+          <input type="date" id="birthDate">
+        </div>
+        <button id="generateBtn" class="btn primary-btn">年表作成</button>
+      </div>
+    </section>
+
+    <!-- 写真ドロップ・記憶想起エリア -->
+    <section class="card photo-section" id="photoSection" style="display: none;">
+      <div class="drop-zone" id="dropZone">
+        <p>📷 写真（Googleフォト等から保存したもの）をここにドラッグ＆ドロップ</p>
+        <span class="sub-text">※Exif情報から撮影日時を取得し、該当年の行をハイライトします</span>
+        <input type="file" id="fileInput" accept="image/*" style="display: none;">
+      </div>
+      <div id="photoResult" class="photo-result" style="display: none;"></div>
+    </section>
+
+    <!-- 操作ボタンエリア -->
+    <div class="action-bar" id="actionBar" style="display: none;">
+      <button id="saveBtn" class="btn">一時保存</button>
+      <button id="exportCsvBtn" class="btn">CSV出力</button>
+      <button id="clearBtn" class="btn danger-btn">リセット</button>
+    </div>
+
+    <!-- 年表テーブルエリア -->
+    <section class="table-section" id="tableSection" style="display: none;">
+      <div class="table-container">
+        <table id="chronicleTable">
+          <thead>
+            <tr>
+              <th class="col-year">西暦</th>
+              <th class="col-age">年齢</th>
+              <th class="col-career">学歴・職歴</th>
+              <th class="col-events">旅行・イベント</th>
+              <th class="col-news">日本・海外のニュース</th>
+            </tr>
+          </thead>
+          <tbody id="tableBody"></tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
