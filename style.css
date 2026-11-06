@@ -198,3 +198,33 @@ tr.highlight-row {
   background-color: var(--highlight-bg) !important;
   transition: background-color 0.5s;
 }
+
+.photo-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.google-btn {
+  background-color: #ffffff;
+  color: #3c4043;
+  border: 1px solid #dadce0;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  padding: 10px 18px;
+  border-radius: 6px;
+}
+
+.google-btn:hover {
+  background-color: #f8f9fa;
+  border-color: #c1c7cd;
+}
+
+.divider-text {
+  font-size: 0.85rem;
+  color: #718096;
+}
+
