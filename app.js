@@ -3,8 +3,8 @@ const CLIENT_ID = '37823403561-e1ng2rda4doi2np86fmaidn0afl2cpnq.apps.googleuserc
 const API_KEY = 'AIzaSyD_hh82gKjAFmrIVKT1nlD2-vQpKzWtH_c';
 const PROJECT_NUMBER = '37823403561';
 
-// Google Picker用の標準スコープ
-const SCOPES = 'https://www.googleapis.com/auth/drive.readonly';
+// Picker読込およびGoogleドライブへのファイル書き込みスコープ
+const SCOPES = 'https://www.googleapis.com/auth/drive.readonly https://www.googleapis.com/auth/drive.file';
 
 let tokenClient;
 let accessToken = null;
@@ -57,7 +57,10 @@ const dropZone = document.getElementById("dropZone");
 const fileInput = document.getElementById("fileInput");
 const photoResult = document.getElementById("photoResult");
 const saveBtn = document.getElementById("saveBtn");
+const importCsvBtn = document.getElementById("importCsvBtn");
+const csvFileInput = document.getElementById("csvFileInput");
 const exportCsvBtn = document.getElementById("exportCsvBtn");
+const driveBackupBtn = document.getElementById("driveBackupBtn");
 const clearBtn = document.getElementById("clearBtn");
 const googlePhotosBtn = document.getElementById("googlePhotosBtn");
 
@@ -79,7 +82,6 @@ window.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  // Google APIライブラリの読み込み待機と初期化
   const checkGoogleLoaded = setInterval(() => {
     if (window.google && window.gapi) {
       clearInterval(checkGoogleLoaded);
@@ -101,13 +103,12 @@ function initGoogleApis() {
   gisInited = true;
 }
 
-// Googleフォト選択ボタン
-googlePhotosBtn.addEventListener("click", () => {
-  if (!gisInited || !pickerInited) {
+// 認証トークン取得ヘルパー
+function getAccessToken(callback) {
+  if (!gisInited) {
     alert("Google APIを読み込み中です。数秒待ってから再試行してください。");
     return;
   }
-
   tokenClient.callback = async (response) => {
     if (response.error !== undefined) {
       console.error("Auth error:", response);
@@ -115,15 +116,25 @@ googlePhotosBtn.addEventListener("click", () => {
       return;
     }
     accessToken = response.access_token;
+    callback(accessToken);
+  };
+  tokenClient.requestAccessToken({ prompt: '' });
+}
+
+// Googleフォト選択ボタン
+googlePhotosBtn.addEventListener("click", () => {
+  if (!pickerInited) {
+    alert("Google APIを読み込み中です。数秒待ってから再試行してください。");
+    return;
+  }
+  getAccessToken(() => {
     try {
       createPicker();
     } catch (err) {
       console.error("Picker creation error:", err);
       alert("ピッカーの起動に失敗しました。");
     }
-  };
-
-  tokenClient.requestAccessToken({ prompt: '' });
+  });
 });
 
 // Google Picker ダイアログの生成
@@ -181,7 +192,7 @@ function highlightAndScrollToYear(photoYear) {
   }
 }
 
-// 年表生成ボタン押下
+// 年表生成ボタン
 generateBtn.addEventListener("click", () => {
   const birthVal = birthDateInput.value;
   if (!birthVal) {
@@ -287,6 +298,11 @@ async function handleLocalPhoto(file) {
 
 // 一時保存
 saveBtn.addEventListener("click", () => {
+  saveToLocalStorage();
+  alert("ブラウザに一時保存しました。");
+});
+
+function saveToLocalStorage() {
   const records = extractTableData();
   const data = {
     name: userNameInput.value,
@@ -294,11 +310,10 @@ saveBtn.addEventListener("click", () => {
     records: records
   };
   localStorage.setItem("my_chronicle_data", JSON.stringify(data));
-  alert("ブラウザに一時保存しました。");
-});
+}
 
-// CSV出力
-exportCsvBtn.addEventListener("click", () => {
+// CSV出力文字列の生成
+function generateCsvContent() {
   const records = extractTableData();
   let csv = "\uFEFF西暦,年齢,学歴・職歴,旅行・イベント,日本・海外のニュース\n";
   records.forEach(r => {
@@ -311,7 +326,12 @@ exportCsvBtn.addEventListener("click", () => {
     ];
     csv += row.join(",") + "\n";
   });
+  return csv;
+}
 
+// ローカルCSVダウンロード
+exportCsvBtn.addEventListener("click", () => {
+  const csv = generateCsvContent();
   const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
@@ -320,6 +340,179 @@ exportCsvBtn.addEventListener("click", () => {
   a.click();
   URL.revokeObjectURL(url);
 });
+
+// CSVインポート（読込）
+importCsvBtn.addEventListener("click", () => csvFileInput.click());
+csvFileInput.addEventListener("change", (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = (event) => {
+    const text = event.target.result;
+    parseAndApplyCsv(text);
+    csvFileInput.value = "";
+  };
+  reader.readAsText(file, "UTF-8");
+});
+
+function parseAndApplyCsv(csvText) {
+  const lines = csvText.split(/\r\n|\n/).filter(line => line.trim() !== "");
+  if (lines.length < 2) {
+    alert("有効なCSVデータではありません。");
+    return;
+  }
+
+  // 1行目はヘッダーとしてスキップ
+  const records = [];
+  for (let i = 1; i < lines.length; i++) {
+    // 簡易CSVパース（ダブルクォート対応）
+    const match = lines[i].match(/(?:^|,)("(?:[^"]|"")*"|[^,]*)/g);
+    if (!match || match.length < 5) continue;
+
+    const row = match.map(val => {
+      let v = val.replace(/^,/, '').trim();
+      if (v.startsWith('"') && v.endsWith('"')) {
+        v = v.substring(1, v.length - 1).replace(/""/g, '"');
+      }
+      return v;
+    });
+
+    records.push({
+      year: parseInt(row[0], 10),
+      age: row[1],
+      career: row[2],
+      events: row[3],
+      news: row[4]
+    });
+  }
+
+  if (records.length === 0 || isNaN(records[0].year)) {
+    alert("年表データの抽出に失敗しました。");
+    return;
+  }
+
+  // 生年特定と再描画
+  const firstYear = records[0].year;
+  let birthVal = birthDateInput.value;
+  if (!birthVal) {
+    birthVal = `${firstYear}-01-01`;
+    birthDateInput.value = birthVal;
+  }
+
+  renderTable(birthVal, records);
+  saveToLocalStorage();
+  alert("CSVから年表データを復元しました。");
+}
+
+// ====== Google ドライブ自動バックアップ連携 ======
+driveBackupBtn.addEventListener("click", () => {
+  const records = extractTableData();
+  if (records.length === 0) {
+    alert("保存する年表データがありません。");
+    return;
+  }
+
+  getAccessToken(async (token) => {
+    driveBackupBtn.disabled = true;
+    driveBackupBtn.textContent = "☁️ ドライブ保存中...";
+
+    try {
+      // 1. "90_Tools" フォルダを検索、なければ新規作成
+      const folderId = await getOrCreateToolsFolder(token);
+
+      // 2. ファイル名設定: mychronicle_yyyymmdd.csv
+      const now = new Date();
+      const yyyy = now.getFullYear();
+      const mm = String(now.getMonth() + 1).padStart(2, '0');
+      const dd = String(now.getDate()).padStart(2, '0');
+      const fileName = `mychronicle_${yyyy}${mm}${dd}.csv`;
+
+      // 3. CSVデータをアップロード
+      const csvContent = generateCsvContent();
+      await uploadCsvToDrive(token, folderId, fileName, csvContent);
+
+      alert(`Googleドライブへ保存しました:\nマイドライブ/90_Tools/${fileName}`);
+    } catch (err) {
+      console.error("Drive backup error:", err);
+      alert("ドライブ保存に失敗しました: " + (err.message || err));
+    } finally {
+      driveBackupBtn.disabled = false;
+      driveBackupBtn.textContent = "☁️ ドライブ保存";
+    }
+  });
+});
+
+// "90_Tools" フォルダのID取得または作成
+async function getOrCreateToolsFolder(token) {
+  const query = "name = '90_Tools' and mimeType = 'application/vnd.google-apps.folder' and trashed = false and 'root' in parents";
+  const searchUrl = `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(query)}&fields=files(id,name)`;
+
+  const res = await fetch(searchUrl, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+  const data = await res.json();
+
+  if (data.files && data.files.length > 0) {
+    return data.files[0].id;
+  }
+
+  // なければ新規作成
+  const createUrl = 'https://www.googleapis.com/drive/v3/files';
+  const meta = {
+    name: '90_Tools',
+    mimeType: 'application/vnd.google-apps.folder',
+    parents: ['root']
+  };
+
+  const createRes = await fetch(createUrl, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(meta)
+  });
+  const newFolder = await createRes.json();
+  return newFolder.id;
+}
+
+// Multipartアップロードで指定フォルダにCSVを保存
+async function uploadCsvToDrive(token, folderId, fileName, csvContent) {
+  const metadata = {
+    name: fileName,
+    parents: [folderId],
+    mimeType: 'text/csv'
+  };
+
+  const boundary = '-------314159265358979323846';
+  const delimiter = `\r\n--${boundary}\r\n`;
+  const closeDelimiter = `\r\n--${boundary}--`;
+
+  const multipartRequestBody =
+    delimiter +
+    'Content-Type: application/json; charset=UTF-8\r\n\r\n' +
+    JSON.stringify(metadata) +
+    delimiter +
+    'Content-Type: text/csv; charset=UTF-8\r\n\r\n' +
+    csvContent +
+    closeDelimiter;
+
+  const uploadUrl = 'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart';
+  const res = await fetch(uploadUrl, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': `multipart/related; boundary=${boundary}`
+    },
+    body: multipartRequestBody
+  });
+
+  if (!res.ok) {
+    const errorJson = await res.json();
+    throw new Error(errorJson.error?.message || "Upload failed");
+  }
+}
 
 // リセット
 clearBtn.addEventListener("click", () => {
