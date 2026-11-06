@@ -1,7 +1,7 @@
 // ====== Google API 設定 ======
-const CLIENT_ID = '37823403561-e1ng2rda4doi2np86fmaidn0afl2cpnq.apps.googleusercontent.com';[cite: 16]
-const API_KEY = 'AIzaSyD_hh82gKjAFmrIVKT1nlD2-vQpKzWtH_c';[cite: 16]
-const PROJECT_NUMBER = '37823403561';[cite: 16]
+const CLIENT_ID = '37823403561-e1ng2rda4doi2np86fmaidn0afl2cpnq.apps.googleusercontent.com';
+const API_KEY = 'AIzaSyD_hh82gKjAFmrIVKT1nlD2-vQpKzWtH_c';
+const PROJECT_NUMBER = '37823403561';
 
 // Google Picker用の標準スコープ
 const SCOPES = 'https://www.googleapis.com/auth/drive.readonly';
