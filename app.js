@@ -134,6 +134,7 @@ function createPicker() {
   const view = new google.picker.PhotosView();
   const picker = new google.picker.PickerBuilder()
     .enableFeature(google.picker.Feature.NAV_HIDDEN)
+    .setAppId("37823403561") // ←追加
     .setOAuthToken(accessToken)
     .addView(view)
     .setDeveloperKey(API_KEY)
