@@ -1,7 +1,9 @@
 // ====== Google API 設定 ======
-const CLIENT_ID = '37823403561-e1ng2rda4doi2np86fmaidn0afl2cpnq.apps.googleusercontent.com'; // 例: xxxx.apps.googleusercontent.com
-const API_KEY = 'AIzaSyD_hh82gKjAFmrIVKT1nlD2-vQpKzWtH_c';     // 例: AIzaSyxxxx
-const SCOPES = 'https://www.googleapis.com/auth/photospicker.mediaitems.readonly';
+const CLIENT_ID = '37823403561-e1ng2rda4doi2np86fmaidn0afl2cpnq.apps.googleusercontent.com'; // 実際のクライアントID
+const API_KEY = 'AIzaSyD_hh82gKjAFmrIVKT1nlD2-vQpKzWtH_c';     // 実際のAPIキー
+
+// Google Picker用の標準スコープ
+const SCOPES = 'https://www.googleapis.com/auth/photoslibrary.readonly';
 
 let tokenClient;
 let accessToken = null;
@@ -60,7 +62,7 @@ const googlePhotosBtn = document.getElementById("googlePhotosBtn");
 
 const CURRENT_YEAR = new Date().getFullYear();
 
-// 初期化（ローカルストレージ復元とAPI初期化）
+// 初期化
 window.addEventListener("DOMContentLoaded", () => {
   const savedData = localStorage.getItem("my_chronicle_data");
   if (savedData) {
@@ -76,7 +78,7 @@ window.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  // Google APIライブラリの読み込み待機と初期化
+  // Google API読み込み監視
   const checkGoogleLoaded = setInterval(() => {
     if (window.google && window.gapi) {
       clearInterval(checkGoogleLoaded);
@@ -93,7 +95,7 @@ function initGoogleApis() {
   tokenClient = google.accounts.oauth2.initTokenClient({
     client_id: CLIENT_ID,
     scope: SCOPES,
-    callback: '', // 後から動的に設定
+    callback: '',
   });
   gisInited = true;
 }
@@ -107,10 +109,17 @@ googlePhotosBtn.addEventListener("click", () => {
 
   tokenClient.callback = async (response) => {
     if (response.error !== undefined) {
-      throw response;
+      console.error("Auth error:", response);
+      alert("認証エラーが発生しました: " + response.error);
+      return;
     }
     accessToken = response.access_token;
-    createPicker();
+    try {
+      createPicker();
+    } catch (err) {
+      console.error("Picker creation error:", err);
+      alert("ピッカーの起動に失敗しました。詳細はコンソールを確認してください。");
+    }
   };
 
   if (accessToken === null) {
@@ -120,12 +129,11 @@ googlePhotosBtn.addEventListener("click", () => {
   }
 });
 
-// Google Picker ダイアログの生成
+// Picker ダイアログの生成
 function createPicker() {
   const view = new google.picker.PhotosView();
   const picker = new google.picker.PickerBuilder()
     .enableFeature(google.picker.Feature.NAV_HIDDEN)
-    .setAppId(CLIENT_ID)
     .setOAuthToken(accessToken)
     .addView(view)
     .setDeveloperKey(API_KEY)
@@ -134,11 +142,10 @@ function createPicker() {
   picker.setVisible(true);
 }
 
-// Pickerで写真が選択された時の処理
+// Picker コールバック
 function pickerCallback(data) {
   if (data.action === google.picker.Action.PICKED) {
     const doc = data.docs[0];
-    // doc.uploadDate や doc.date (UNIXミリ秒) から撮影日時を特定
     const timestamp = doc.uploadDate || doc.date;
     if (timestamp) {
       const dt = new Date(parseInt(timestamp, 10));
@@ -173,7 +180,7 @@ function highlightAndScrollToYear(photoYear) {
   }
 }
 
-// 年表生成ボタン押下
+// 年表生成ボタン
 generateBtn.addEventListener("click", () => {
   const birthVal = birthDateInput.value;
   if (!birthVal) {
@@ -234,7 +241,7 @@ function renderTable(birthVal, savedRecords = null) {
   tableSection.style.display = "block";
 }
 
-// 写真ローカルドロップ処理（従来機能の維持）
+// ローカル写真ドロップ処理
 dropZone.addEventListener("click", () => fileInput.click());
 dropZone.addEventListener("dragover", (e) => {
   e.preventDefault();
