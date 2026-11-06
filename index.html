@@ -5,8 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>my-chronicle - わたしの履歴書</title>
   <link rel="stylesheet" href="style.css">
-  <!-- Exif解析ライブラリ (CDN) -->
+  <!-- Exif解析ライブラリ -->
   <script src="https://cdn.jsdelivr.net/npm/exifr/dist/full.umd.js"></script>
+  <!-- Google API & Identity Services -->
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <script src="https://apis.google.com/js/api.js" async defer></script>
 </head>
 <body>
   <div class="container">
@@ -30,10 +33,16 @@
       </div>
     </section>
 
-    <!-- 写真ドロップ・記憶想起エリア -->
+    <!-- 写真・Googleフォト記憶想起エリア -->
     <section class="card photo-section" id="photoSection" style="display: none;">
+      <div class="photo-actions">
+        <button id="googlePhotosBtn" class="btn google-btn">
+          🖼️ Googleフォトから写真を選択
+        </button>
+        <span class="divider-text">または</span>
+      </div>
       <div class="drop-zone" id="dropZone">
-        <p>📷 写真（Googleフォト等から保存したもの）をここにドラッグ＆ドロップ</p>
+        <p>📷 写真ファイルをここにドラッグ＆ドロップ</p>
         <span class="sub-text">※Exif情報から撮影日時を取得し、該当年の行をハイライトします</span>
         <input type="file" id="fileInput" accept="image/*" style="display: none;">
       </div>
