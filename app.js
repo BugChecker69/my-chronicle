@@ -134,12 +134,11 @@ googlePhotosBtn.addEventListener("click", () => {
 
 // Picker ダイアログの生成
 function createPicker() {
-  // PhotosViewId を直接指定して写真ビューを構築
   const view = new google.picker.View(google.picker.ViewId.PHOTOS);
 
   const picker = new google.picker.PickerBuilder()
     .enableFeature(google.picker.Feature.NAV_HIDDEN)
-    .setOrigin("https://bugchecker69.github.io")
+    .setAppId("37823403561") // ← 数字のプロジェクト番号を指定
     .setOAuthToken(accessToken)
     .addView(view)
     .setDeveloperKey(API_KEY)
