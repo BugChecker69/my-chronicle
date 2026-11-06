@@ -2,8 +2,8 @@
 const CLIENT_ID = '37823403561-e1ng2rda4doi2np86fmaidn0afl2cpnq.apps.googleusercontent.com'; // 実際のクライアントID
 const API_KEY = 'AIzaSyD_hh82gKjAFmrIVKT1nlD2-vQpKzWtH_c';     // 実際のAPIキー
 
-// 権限スコープ（Google Photos Picker API対応スコープ）
-const SCOPES = 'https://www.googleapis.com/auth/photospicker.mediaitems.readonly';
+// Google Picker用の標準スコープ（Drive/Docs/Photos画像参照）
+const SCOPES = 'https://www.googleapis.com/auth/drive.readonly';
 
 let tokenClient;
 let accessToken = null;
@@ -62,7 +62,7 @@ const googlePhotosBtn = document.getElementById("googlePhotosBtn");
 
 const CURRENT_YEAR = new Date().getFullYear();
 
-// 初期化
+// 初期化（ローカルストレージ復元とAPI初期化）
 window.addEventListener("DOMContentLoaded", () => {
   const savedData = localStorage.getItem("my_chronicle_data");
   if (savedData) {
@@ -78,6 +78,7 @@ window.addEventListener("DOMContentLoaded", () => {
     }
   }
 
+  // Google APIライブラリの読み込み待機と初期化
   const checkGoogleLoaded = setInterval(() => {
     if (window.google && window.gapi) {
       clearInterval(checkGoogleLoaded);
@@ -121,24 +122,17 @@ googlePhotosBtn.addEventListener("click", () => {
     }
   };
 
-  // 常に prompt: '' で要求（一度許可済みであれば同意画面をスキップ）
   tokenClient.requestAccessToken({ prompt: '' });
 });
 
-  if (accessToken === null) {
-    tokenClient.requestAccessToken({ prompt: 'consent' });
-  } else {
-    tokenClient.requestAccessToken({ prompt: '' });
-  }
-});
-
-// Picker ダイアログの生成
+// Google Picker ダイアログの生成
 function createPicker() {
-  const view = new google.picker.View(google.picker.ViewId.PHOTOS);
+  const view = new google.picker.DocsView(google.picker.ViewId.DOCS_IMAGES)
+    .setMimeTypes("image/png,image/jpeg,image/jpg,image/webp");
 
   const picker = new google.picker.PickerBuilder()
     .enableFeature(google.picker.Feature.NAV_HIDDEN)
-    .setAppId("37823403561") // ← 数字のプロジェクト番号を指定
+    .setOrigin(window.location.protocol + '//' + window.location.host)
     .setOAuthToken(accessToken)
     .addView(view)
     .setDeveloperKey(API_KEY)
@@ -147,7 +141,7 @@ function createPicker() {
   picker.setVisible(true);
 }
 
-// Picker コールバック
+// Pickerで写真が選択された時の処理
 function pickerCallback(data) {
   if (data.action === google.picker.Action.PICKED) {
     const doc = data.docs[0];
@@ -185,7 +179,7 @@ function highlightAndScrollToYear(photoYear) {
   }
 }
 
-// 年表生成ボタン
+// 年表生成ボタン押下
 generateBtn.addEventListener("click", () => {
   const birthVal = birthDateInput.value;
   if (!birthVal) {
@@ -246,7 +240,7 @@ function renderTable(birthVal, savedRecords = null) {
   tableSection.style.display = "block";
 }
 
-// ローカル写真ドロップ処理
+// 写真ローカルドロップ処理
 dropZone.addEventListener("click", () => fileInput.click());
 dropZone.addEventListener("dragover", (e) => {
   e.preventDefault();
