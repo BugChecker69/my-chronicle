@@ -1,4 +1,14 @@
-// 簡易年代別ニュース辞書（1960年〜主要トピック）
+// ====== Google API 設定 ======
+const CLIENT_ID = '37823403561-e1ng2rda4doi2np86fmaidn0afl2cpnq.apps.googleusercontent.com'; // 例: xxxx.apps.googleusercontent.com
+const API_KEY = 'AIzaSyD_hh82gKjAFmrIVKT1nlD2-vQpKzWtH_c';     // 例: AIzaSyxxxx
+const SCOPES = 'https://www.googleapis.com/auth/photospicker.mediaitems.readonly';
+
+let tokenClient;
+let accessToken = null;
+let pickerInited = false;
+let gisInited = false;
+
+// 簡易年代別ニュース辞書
 const historicalNews = {
   1964: "東京オリンピック開催、東海道新幹線開業",
   1968: "3億円事件発生",
@@ -32,7 +42,7 @@ const historicalNews = {
   2025: "大阪・関西万博開催"
 };
 
-// DOM要素の参照
+// DOM要素
 const userNameInput = document.getElementById("userName");
 const birthDateInput = document.getElementById("birthDate");
 const generateBtn = document.getElementById("generateBtn");
@@ -46,10 +56,11 @@ const photoResult = document.getElementById("photoResult");
 const saveBtn = document.getElementById("saveBtn");
 const exportCsvBtn = document.getElementById("exportCsvBtn");
 const clearBtn = document.getElementById("clearBtn");
+const googlePhotosBtn = document.getElementById("googlePhotosBtn");
 
 const CURRENT_YEAR = new Date().getFullYear();
 
-// 初期化（ローカルストレージの復元確認）
+// 初期化（ローカルストレージ復元とAPI初期化）
 window.addEventListener("DOMContentLoaded", () => {
   const savedData = localStorage.getItem("my_chronicle_data");
   if (savedData) {
@@ -64,7 +75,103 @@ window.addEventListener("DOMContentLoaded", () => {
       console.error("データ復元エラー:", e);
     }
   }
+
+  // Google APIライブラリの読み込み待機と初期化
+  const checkGoogleLoaded = setInterval(() => {
+    if (window.google && window.gapi) {
+      clearInterval(checkGoogleLoaded);
+      initGoogleApis();
+    }
+  }, 100);
 });
+
+function initGoogleApis() {
+  gapi.load('picker', () => {
+    pickerInited = true;
+  });
+
+  tokenClient = google.accounts.oauth2.initTokenClient({
+    client_id: CLIENT_ID,
+    scope: SCOPES,
+    callback: '', // 後から動的に設定
+  });
+  gisInited = true;
+}
+
+// Googleフォト選択ボタン
+googlePhotosBtn.addEventListener("click", () => {
+  if (!gisInited || !pickerInited) {
+    alert("Google APIを読み込み中です。数秒待ってから再試行してください。");
+    return;
+  }
+
+  tokenClient.callback = async (response) => {
+    if (response.error !== undefined) {
+      throw response;
+    }
+    accessToken = response.access_token;
+    createPicker();
+  };
+
+  if (accessToken === null) {
+    tokenClient.requestAccessToken({ prompt: 'consent' });
+  } else {
+    tokenClient.requestAccessToken({ prompt: '' });
+  }
+});
+
+// Google Picker ダイアログの生成
+function createPicker() {
+  const view = new google.picker.PhotosView();
+  const picker = new google.picker.PickerBuilder()
+    .enableFeature(google.picker.Feature.NAV_HIDDEN)
+    .setAppId(CLIENT_ID)
+    .setOAuthToken(accessToken)
+    .addView(view)
+    .setDeveloperKey(API_KEY)
+    .setCallback(pickerCallback)
+    .build();
+  picker.setVisible(true);
+}
+
+// Pickerで写真が選択された時の処理
+function pickerCallback(data) {
+  if (data.action === google.picker.Action.PICKED) {
+    const doc = data.docs[0];
+    // doc.uploadDate や doc.date (UNIXミリ秒) から撮影日時を特定
+    const timestamp = doc.uploadDate || doc.date;
+    if (timestamp) {
+      const dt = new Date(parseInt(timestamp, 10));
+      const photoYear = dt.getFullYear();
+      const dateStr = `${photoYear}年${dt.getMonth() + 1}月${dt.getDate()}日`;
+
+      photoResult.style.display = "block";
+      photoResult.innerHTML = `<strong>Googleフォトから選択:</strong> ${dateStr} の写真を検出しました。<br>該当行へスクロールしました。「旅行・イベント」列に入力してください。`;
+
+      highlightAndScrollToYear(photoYear);
+    } else {
+      photoResult.style.display = "block";
+      photoResult.textContent = "写真の日時情報を取得できませんでした。";
+    }
+  }
+}
+
+// 該当年のハイライトとスクロール
+function highlightAndScrollToYear(photoYear) {
+  const targetRow = document.getElementById(`row-${photoYear}`);
+  if (targetRow) {
+    document.querySelectorAll("tr.highlight-row").forEach(r => r.classList.remove("highlight-row"));
+    targetRow.classList.add("highlight-row");
+    targetRow.scrollIntoView({ behavior: "smooth", block: "center" });
+
+    const eventCell = targetRow.querySelector(".col-events");
+    if (eventCell && eventCell.textContent.trim() === "") {
+      eventCell.focus();
+    }
+  } else {
+    photoResult.innerHTML += `<br>※年表の範囲外（${photoYear}年）の写真です。`;
+  }
+}
 
 // 年表生成ボタン押下
 generateBtn.addEventListener("click", () => {
@@ -76,7 +183,7 @@ generateBtn.addEventListener("click", () => {
   renderTable(birthVal);
 });
 
-// テーブル生成
+// テーブル描画
 function renderTable(birthVal, savedRecords = null) {
   const birth = new Date(birthVal);
   const birthYear = birth.getFullYear();
@@ -97,7 +204,6 @@ function renderTable(birthVal, savedRecords = null) {
     const tr = document.createElement("tr");
     tr.id = `row-${year}`;
 
-    // 学歴の自動補完ロジック（4月1日基準の早生まれ考慮）
     let autoCareer = "";
     const isEarly = (birthMonth < 4) || (birthMonth === 4 && birthDay === 1);
     const schoolStartYear = birthYear + (isEarly ? 6 : 7);
@@ -108,7 +214,6 @@ function renderTable(birthVal, savedRecords = null) {
     else if (year === schoolStartYear + 12) autoCareer = "高校 卒業 / 大学 入学";
     else if (year === schoolStartYear + 16) autoCareer = "大学 卒業 / 就職";
 
-    // 既存保存データがあれば優先
     const saved = recordsMap[year] || {};
     const careerText = saved.career !== undefined ? saved.career : autoCareer;
     const eventsText = saved.events !== undefined ? saved.events : "";
@@ -129,7 +234,7 @@ function renderTable(birthVal, savedRecords = null) {
   tableSection.style.display = "block";
 }
 
-// 写真ドロップ処理
+// 写真ローカルドロップ処理（従来機能の維持）
 dropZone.addEventListener("click", () => fileInput.click());
 dropZone.addEventListener("dragover", (e) => {
   e.preventDefault();
@@ -140,17 +245,16 @@ dropZone.addEventListener("drop", (e) => {
   e.preventDefault();
   dropZone.classList.remove("dragover");
   if (e.dataTransfer.files.length > 0) {
-    handlePhoto(e.dataTransfer.files[0]);
+    handleLocalPhoto(e.dataTransfer.files[0]);
   }
 });
 fileInput.addEventListener("change", (e) => {
   if (e.target.files.length > 0) {
-    handlePhoto(e.target.files[0]);
+    handleLocalPhoto(e.target.files[0]);
   }
 });
 
-// Exif解析
-async function handlePhoto(file) {
+async function handleLocalPhoto(file) {
   try {
     const exifData = await exifr.parse(file);
     if (exifData && exifData.DateTimeOriginal) {
@@ -161,19 +265,7 @@ async function handlePhoto(file) {
       photoResult.style.display = "block";
       photoResult.innerHTML = `<strong>撮影日時を検出:</strong> ${dateStr} の写真です。<br>該当行へスクロールしました。「旅行・イベント」列に入力してください。`;
 
-      const targetRow = document.getElementById(`row-${photoYear}`);
-      if (targetRow) {
-        document.querySelectorAll("tr.highlight-row").forEach(r => r.classList.remove("highlight-row"));
-        targetRow.classList.add("highlight-row");
-        targetRow.scrollIntoView({ behavior: "smooth", block: "center" });
-
-        const eventCell = targetRow.querySelector(".col-events");
-        if (eventCell && eventCell.textContent.trim() === "") {
-          eventCell.focus();
-        }
-      } else {
-        photoResult.innerHTML += `<br>※年表の範囲外（${photoYear}年）の写真です。`;
-      }
+      highlightAndScrollToYear(photoYear);
     } else {
       photoResult.style.display = "block";
       photoResult.textContent = "写真から撮影日時（Exif）を取得できませんでした。";
@@ -185,7 +277,7 @@ async function handlePhoto(file) {
   }
 }
 
-// 一時保存（LocalStorage）
+// 一時保存
 saveBtn.addEventListener("click", () => {
   const records = extractTableData();
   const data = {
@@ -229,7 +321,6 @@ clearBtn.addEventListener("click", () => {
   }
 });
 
-// テーブルデータ抽出
 function extractTableData() {
   const rows = tableBody.querySelectorAll("tr");
   const data = [];
