@@ -2,8 +2,8 @@
 const CLIENT_ID = '37823403561-e1ng2rda4doi2np86fmaidn0afl2cpnq.apps.googleusercontent.com'; // 実際のクライアントID
 const API_KEY = 'AIzaSyD_hh82gKjAFmrIVKT1nlD2-vQpKzWtH_c';     // 実際のAPIキー
 
-// Google Picker用の標準スコープ
-const SCOPES = 'https://www.googleapis.com/auth/photoslibrary.readonly';
+// 権限スコープ（Google Photos Picker API対応スコープ）
+const SCOPES = 'https://www.googleapis.com/auth/photospicker.mediaitems.readonly';
 
 let tokenClient;
 let accessToken = null;
@@ -78,7 +78,6 @@ window.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  // Google API読み込み監視
   const checkGoogleLoaded = setInterval(() => {
     if (window.google && window.gapi) {
       clearInterval(checkGoogleLoaded);
@@ -118,7 +117,7 @@ googlePhotosBtn.addEventListener("click", () => {
       createPicker();
     } catch (err) {
       console.error("Picker creation error:", err);
-      alert("ピッカーの起動に失敗しました。詳細はコンソールを確認してください。");
+      alert("ピッカーの起動に失敗しました。");
     }
   };
 
@@ -131,10 +130,12 @@ googlePhotosBtn.addEventListener("click", () => {
 
 // Picker ダイアログの生成
 function createPicker() {
-  const view = new google.picker.PhotosView();
+  // PhotosViewId を直接指定して写真ビューを構築
+  const view = new google.picker.View(google.picker.ViewId.PHOTOS);
+
   const picker = new google.picker.PickerBuilder()
     .enableFeature(google.picker.Feature.NAV_HIDDEN)
-    .setAppId("37823403561") // ←追加
+    .setOrigin("https://bugchecker69.github.io")
     .setOAuthToken(accessToken)
     .addView(view)
     .setDeveloperKey(API_KEY)
@@ -147,7 +148,7 @@ function createPicker() {
 function pickerCallback(data) {
   if (data.action === google.picker.Action.PICKED) {
     const doc = data.docs[0];
-    const timestamp = doc.uploadDate || doc.date;
+    const timestamp = doc.uploadDate || doc.date || (doc.lastEditedUtc ? parseInt(doc.lastEditedUtc, 10) : null);
     if (timestamp) {
       const dt = new Date(parseInt(timestamp, 10));
       const photoYear = dt.getFullYear();
