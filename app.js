@@ -1,8 +1,9 @@
 // ====== Google API 設定 ======
-const CLIENT_ID = '37823403561-e1ng2rda4doi2np86fmaidn0afl2cpnq.apps.googleusercontent.com'; // 実際のクライアントID
-const API_KEY = 'AIzaSyD_hh82gKjAFmrIVKT1nlD2-vQpKzWtH_c';     // 実際のAPIキー
+const CLIENT_ID = '37823403561-e1ng2rda4doi2np86fmaidn0afl2cpnq.apps.googleusercontent.com';[cite: 16]
+const API_KEY = 'AIzaSyD_hh82gKjAFmrIVKT1nlD2-vQpKzWtH_c';[cite: 16]
+const PROJECT_NUMBER = '37823403561';[cite: 16]
 
-// Google Picker用の標準スコープ（Drive/Docs/Photos画像参照）
+// Google Picker用の標準スコープ
 const SCOPES = 'https://www.googleapis.com/auth/drive.readonly';
 
 let tokenClient;
@@ -132,6 +133,7 @@ function createPicker() {
 
   const picker = new google.picker.PickerBuilder()
     .enableFeature(google.picker.Feature.NAV_HIDDEN)
+    .setAppId(PROJECT_NUMBER)
     .setOrigin(window.location.protocol + '//' + window.location.host)
     .setOAuthToken(accessToken)
     .addView(view)
