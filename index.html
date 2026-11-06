@@ -23,7 +23,7 @@
       <div class="form-row">
         <div class="form-group">
           <label for="userName">氏名</label>
-          <input type="text" id="userName" placeholder="例: 山田 太郎">
+          <input type="text" id="userName" placeholder="例: 相川 秀樹">
         </div>
         <div class="form-group">
           <label for="birthDate">生年月日</label>
@@ -52,7 +52,10 @@
     <!-- 操作ボタンエリア -->
     <div class="action-bar" id="actionBar" style="display: none;">
       <button id="saveBtn" class="btn">一時保存</button>
+      <button id="importCsvBtn" class="btn">CSV読込</button>
+      <input type="file" id="csvFileInput" accept=".csv" style="display: none;">
       <button id="exportCsvBtn" class="btn">CSV出力</button>
+      <button id="driveBackupBtn" class="btn google-btn">☁️ ドライブ保存</button>
       <button id="clearBtn" class="btn danger-btn">リセット</button>
     </div>
 
