@@ -121,6 +121,10 @@ googlePhotosBtn.addEventListener("click", () => {
     }
   };
 
+  // 常に prompt: '' で要求（一度許可済みであれば同意画面をスキップ）
+  tokenClient.requestAccessToken({ prompt: '' });
+});
+
   if (accessToken === null) {
     tokenClient.requestAccessToken({ prompt: 'consent' });
   } else {
