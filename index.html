@@ -116,7 +116,7 @@
       gap: 6px;
       color: #fff;
       background: #334155;
-      transition: background 0.15s ease;
+      transition: background 0.15s ease, opacity 0.15s ease;
       white-space: nowrap;
     }
 
@@ -200,8 +200,11 @@
     .col-events { width: 35%; }
     .col-news { width: 30%; color: #cbd5e1; font-size: 0.85rem; }
 
+    /* セル内の改行を視覚的に保持する設定 */
     td.editable {
       cursor: text;
+      white-space: pre-wrap;
+      word-break: break-word;
     }
 
     td.editable:focus {
@@ -218,6 +221,43 @@
     @keyframes flashHighlight {
       0% { background-color: rgba(56, 189, 248, 0.5); }
       100% { background-color: rgba(56, 189, 248, 0.2); }
+    }
+
+    /* トップに戻るフローティングボタン */
+    #scrollTopBtn {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      background: var(--primary);
+      color: #fff;
+      border: 1px solid var(--accent);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.3rem;
+      cursor: pointer;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.25s ease, transform 0.15s ease;
+      z-index: 999;
+    }
+
+    #scrollTopBtn.visible {
+      opacity: 0.9;
+      pointer-events: auto;
+    }
+
+    #scrollTopBtn:hover {
+      opacity: 1;
+      transform: translateY(-2px);
+    }
+
+    #scrollTopBtn:active {
+      transform: scale(0.95);
     }
   </style>
 </head>
@@ -285,6 +325,9 @@
   </section>
 </div>
 
+<!-- トップに戻るボタン -->
+<button id="scrollTopBtn" title="トップへ戻る">⬆️</button>
+
 <script>
   // ====== Google API 設定 ======
   const CLIENT_ID = '37823403561-e1ng2rda4doi2np86fmaidn0afl2cpnq.apps.googleusercontent.com';
@@ -298,7 +341,6 @@
   let pickerInited = false;
   let gisInited = false;
 
-  // 年代別ニュース辞書
   const historicalNews = {
     1964: "東京オリンピック開催、東海道新幹線開業",
     1968: "3億円事件発生",
@@ -351,10 +393,11 @@
   const driveBackupBtn = document.getElementById("driveBackupBtn");
   const clearBtn = document.getElementById("clearBtn");
   const googlePhotosBtn = document.getElementById("googlePhotosBtn");
+  const scrollTopBtn = document.getElementById("scrollTopBtn");
 
   const CURRENT_YEAR = new Date().getFullYear();
 
-  // 初期化処理（ローカルストレージ復元とAPI初期化）
+  // 初期化処理
   window.addEventListener("DOMContentLoaded", () => {
     const savedData = localStorage.getItem("my_chronicle_data");
     if (savedData) {
@@ -378,6 +421,20 @@
     }, 100);
   });
 
+  // スクロール検知で「トップに戻る」ボタンの表示切替
+  window.addEventListener("scroll", () => {
+    if (window.scrollY > 250) {
+      scrollTopBtn.classList.add("visible");
+    } else {
+      scrollTopBtn.classList.remove("visible");
+    }
+  });
+
+  // トップに戻る
+  scrollTopBtn.addEventListener("click", () => {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  });
+
   function initGoogleApis() {
     gapi.load('picker', () => {
       pickerInited = true;
@@ -391,7 +448,6 @@
     gisInited = true;
   }
 
-  // 認証トークン取得ヘルパー
   function getAccessToken(callback) {
     if (!gisInited) {
       alert("Google APIを読み込み中です。数秒待ってから再試行してください。");
@@ -409,7 +465,7 @@
     tokenClient.requestAccessToken({ prompt: '' });
   }
 
-  // Googleフォト選択ボタン
+  // Googleフォト選択
   googlePhotosBtn.addEventListener("click", () => {
     if (!pickerInited) {
       alert("Google APIを読み込み中です。数秒待ってから再試行してください。");
@@ -469,7 +525,7 @@
       targetRow.scrollIntoView({ behavior: "smooth", block: "center" });
 
       const eventCell = targetRow.querySelector(".col-events");
-      if (eventCell && eventCell.textContent.trim() === "") {
+      if (eventCell && eventCell.innerText.trim() === "") {
         eventCell.focus();
       }
     } else {
@@ -534,13 +590,40 @@
       const eventsText = saved.events !== undefined ? saved.events : "";
       const newsText = saved.news !== undefined ? saved.news : (historicalNews[year] || "");
 
-      tr.innerHTML = `
-        <td class="col-year">${year}</td>
-        <td class="col-age">${age}歳</td>
-        <td class="col-career editable" contenteditable="true">${careerText}</td>
-        <td class="col-events editable" contenteditable="true">${eventsText}</td>
-        <td class="col-news editable" contenteditable="true">${newsText}</td>
-      `;
+      const tdYear = document.createElement("td");
+      tdYear.className = "col-year";
+      tdYear.textContent = year;
+
+      const tdAge = document.createElement("td");
+      tdAge.className = "col-age";
+      tdAge.textContent = `${age}歳`;
+
+      const tdCareer = document.createElement("td");
+      tdCareer.className = "col-career editable";
+      tdCareer.contentEditable = "true";
+      tdCareer.innerText = careerText;
+
+      const tdEvents = document.createElement("td");
+      tdEvents.className = "col-events editable";
+      tdEvents.contentEditable = "true";
+      tdEvents.innerText = eventsText;
+
+      const tdNews = document.createElement("td");
+      tdNews.className = "col-news editable";
+      tdNews.contentEditable = "true";
+      tdNews.innerText = newsText;
+
+      // セル入力時に自動一時保存
+      [tdCareer, tdEvents, tdNews].forEach(td => {
+        td.addEventListener("input", saveToLocalStorage);
+      });
+
+      tr.appendChild(tdYear);
+      tr.appendChild(tdAge);
+      tr.appendChild(tdCareer);
+      tr.appendChild(tdEvents);
+      tr.appendChild(tdNews);
+
       tableBody.appendChild(tr);
     }
 
@@ -608,13 +691,28 @@
     localStorage.setItem("my_chronicle_data", JSON.stringify(data));
   }
 
-  // CSV出力文字列の生成（メタデータ埋め込み対応）
+  // テーブルデータ抽出（改行を保持する innerText を使用）
+  function extractTableData() {
+    const rows = tableBody.querySelectorAll("tr");
+    const data = [];
+    rows.forEach(tr => {
+      data.push({
+        year: tr.querySelector(".col-year").textContent.trim(),
+        age: tr.querySelector(".col-age").textContent.trim(),
+        career: tr.querySelector(".col-career").innerText.replace(/\r\n/g, '\n').trim(),
+        events: tr.querySelector(".col-events").innerText.replace(/\r\n/g, '\n').trim(),
+        news: tr.querySelector(".col-news").innerText.replace(/\r\n/g, '\n').trim()
+      });
+    });
+    return data;
+  }
+
+  // CSV出力文字列生成（セル内改行を保持するRFC 4180標準準拠）
   function generateCsvContent() {
     const records = extractTableData();
     const name = userNameInput.value || "";
     const birthDate = birthDateInput.value || "";
 
-    // 1行目にメタデータ、2行目にヘッダー
     let csv = `\uFEFF# Name: ${name}, BirthDate: ${birthDate}\n`;
     csv += "西暦,年齢,学歴・職歴,旅行・イベント,日本・海外のニュース\n";
 
@@ -662,63 +760,120 @@
     reader.readAsText(file, "UTF-8");
   });
 
-  // CSVインポート処理（メタデータ復元・後方互換対応）
+  // RFC 4180準拠のCSVパーサー（セル内改行に対応）
+  function parseCSV(text) {
+    const rows = [];
+    let currentRow = [];
+    let currentCell = '';
+    let insideQuotes = false;
+    let i = 0;
+
+    // BOM削除
+    if (text.charCodeAt(0) === 0xFEFF) {
+      text = text.slice(1);
+    }
+
+    while (i < text.length) {
+      const char = text[i];
+      const nextChar = text[i + 1];
+
+      if (char === '"') {
+        if (insideQuotes && nextChar === '"') {
+          currentCell += '"';
+          i += 2;
+          continue;
+        } else {
+          insideQuotes = !insideQuotes;
+          i++;
+          continue;
+        }
+      }
+
+      if (!insideQuotes) {
+        if (char === ',') {
+          currentRow.push(currentCell.trim());
+          currentCell = '';
+          i++;
+          continue;
+        }
+        if (char === '\r' || char === '\n') {
+          if (char === '\r' && nextChar === '\n') {
+            i++;
+          }
+          currentRow.push(currentCell.trim());
+          if (currentRow.some(c => c !== '')) {
+            rows.push(currentRow);
+          }
+          currentRow = [];
+          currentCell = '';
+          i++;
+          continue;
+        }
+      }
+
+      currentCell += char;
+      i++;
+    }
+
+    if (currentCell !== '' || currentRow.length > 0) {
+      currentRow.push(currentCell.trim());
+      if (currentRow.some(c => c !== '')) {
+        rows.push(currentRow);
+      }
+    }
+
+    return rows;
+  }
+
+  // CSVインポート処理
   function parseAndApplyCsv(csvText) {
-    const lines = csvText.split(/\r\n|\n/).filter(line => line.trim() !== "");
-    if (lines.length < 2) {
+    const rawLines = csvText.split(/\r\n|\n/);
+    let parsedName = "";
+    let parsedBirthDate = "";
+
+    // 1行目のメタデータ判定
+    if (rawLines.length > 0 && rawLines[0].trim().startsWith("#")) {
+      const metaLine = rawLines[0].trim();
+      const nameMatch = metaLine.match(/Name:\s*([^,]*)/);
+      const birthMatch = metaLine.match(/BirthDate:\s*([^,\r\n]*)/);
+
+      if (nameMatch && nameMatch[1]) parsedName = nameMatch[1].trim();
+      if (birthMatch && birthMatch[1]) parsedBirthDate = birthMatch[1].trim();
+    }
+
+    if (parsedName) userNameInput.value = parsedName;
+    if (parsedBirthDate) birthDateInput.value = parsedBirthDate;
+
+    // 全文をパース
+    const rows = parseCSV(csvText);
+    if (rows.length < 2) {
       alert("有効なCSVデータではありません。");
       return;
     }
 
-    let dataStartIndex = 1;
-    let parsedName = "";
-    let parsedBirthDate = "";
-
-    // 1行目がメタデータ行か判定
-    const firstLine = lines[0].trim();
-    if (firstLine.startsWith("#")) {
-      const nameMatch = firstLine.match(/Name:\s*([^,]*)/);
-      const birthMatch = firstLine.match(/BirthDate:\s*([^,\r\n]*)/);
-
-      if (nameMatch && nameMatch[1]) parsedName = nameMatch[1].trim();
-      if (birthMatch && birthMatch[1]) parsedBirthDate = birthMatch[1].trim();
-
-      dataStartIndex = 2;
-    }
-
-    // メタデータが存在する場合は入力欄へセット
-    if (parsedName) userNameInput.value = parsedName;
-    if (parsedBirthDate) birthDateInput.value = parsedBirthDate;
-
-    // テーブルデータのパース
     const records = [];
-    for (let i = dataStartIndex; i < lines.length; i++) {
-      const match = lines[i].match(/(?:^|,)("(?:[^"]|"")*"|[^,]*)/g);
-      if (!match || match.length < 5) continue;
+    rows.forEach(row => {
+      // メタデータ行・ヘッダー行をスキップ
+      if (row[0].startsWith("#") || row[0] === "西暦") return;
+      if (row.length < 5) return;
 
-      const row = match.map(val => {
-        let v = val.replace(/^,/, '').trim();
-        if (v.startsWith('"') && v.endsWith('"')) {
-          v = v.substring(1, v.length - 1).replace(/""/g, '"');
-        }
-        return v;
-      });
+      const y = parseInt(row[0], 10);
+      if (!isNaN(y)) {
+        records.push({
+          year: y,
+          age: row[1],
+          career: row[2],
+          events: row[3],
+          news: row[4]
+        });
+      }
+    });
 
-      records.push({
-        year: parseInt(row[0], 10),
-        age: row[1],
-        career: row[2],
-        events: row[3],
-        news: row[4]
-      });
-    }
-
-    if (records.length === 0 || isNaN(records[0].year)) {
+    if (records.length === 0) {
       alert("年表データの抽出に失敗しました。");
       return;
     }
 
-    // 生年月日の決定
     let birthVal = birthDateInput.value;
     if (!birthVal) {
       birthVal = `${records[0].year}-01-01`;
@@ -730,7 +885,7 @@
     alert("CSVから年表データを復元しました。");
   }
 
-  // ====== Google ドライブ自動バックアップ連携 ======
+  // Google ドライブ自動バックアップ
   driveBackupBtn.addEventListener("click", () => {
     const records = extractTableData();
     if (records.length === 0) {
@@ -840,21 +995,4 @@
       location.reload();
     }
   });
-
-  function extractTableData() {
-    const rows = tableBody.querySelectorAll("tr");
-    const data = [];
-    rows.forEach(tr => {
-      data.push({
-        year: tr.querySelector(".col-year").textContent.trim(),
-        age: tr.querySelector(".col-age").textContent.trim(),
-        career: tr.querySelector(".col-career").textContent.trim(),
-        events: tr.querySelector(".col-events").textContent.trim(),
-        news: tr.querySelector(".col-news").textContent.trim()
-      });
-    });
-    return data;
-  }
 </script>
-</body>
-</html>
