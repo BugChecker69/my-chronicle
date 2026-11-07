@@ -5,11 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>my-chronicle</title>
   
-  <!-- Exif 解析ライブラリ -->
+  <!-- Exif 解析ライブラリ（ローカル写真の日時抽出用のみ残す） -->
   <script src="https://cdn.jsdelivr.net/npm/exifr/dist/full.umd.js"></script>
-  <!-- Google API & Identity Services -->
-  <script src="https://apis.google.com/js/api.js"></script>
-  <script src="https://accounts.google.com/gsi/client"></script>
 
   <style>
     :root {
@@ -128,7 +125,6 @@
     .btn-success { background: var(--success); }
     .btn-warning { background: var(--warning); color: #000; }
     .btn-danger { background: var(--danger); }
-    .btn-google { background: #4285f4; }
 
     .action-bar {
       display: flex;
@@ -200,7 +196,6 @@
     .col-events { width: 35%; }
     .col-news { width: 30%; color: #cbd5e1; font-size: 0.85rem; }
 
-    /* セル内の改行を視覚的に保持する設定 */
     td.editable {
       cursor: text;
       white-space: pre-wrap;
@@ -223,50 +218,49 @@
       100% { background-color: rgba(56, 189, 248, 0.2); }
     }
 
-    /* トップに戻るフローティングボタン */
-#scrollTopBtn {
-  position: fixed;
-  bottom: 24px;
-  right: 24px;
-  width: 48px;
-  height: 48px;
-  border-radius: 50%;
-  background: #1d63a8; /* 画像と同系統の落ち着いた濃いブルー */
-  border: none;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.35);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.25s ease, transform 0.15s ease, background 0.2s ease;
-  z-index: 999;
-}
+    #scrollTopBtn {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      background: #1d63a8;
+      border: none;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.35);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.25s ease, transform 0.15s ease, background 0.2s ease;
+      z-index: 999;
+    }
 
-#scrollTopBtn svg {
-  width: 22px;
-  height: 22px;
-  stroke: #ffffff;
-  stroke-width: 3.5;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  fill: none;
-}
+    #scrollTopBtn svg {
+      width: 22px;
+      height: 22px;
+      stroke: #ffffff;
+      stroke-width: 3.5;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      fill: none;
+    }
 
-#scrollTopBtn.visible {
-  opacity: 1;
-  pointer-events: auto;
-}
+    #scrollTopBtn.visible {
+      opacity: 1;
+      pointer-events: auto;
+    }
 
-#scrollTopBtn:hover {
-  background: #154c82;
-  transform: translateY(-2px);
-}
+    #scrollTopBtn:hover {
+      background: #154c82;
+      transform: translateY(-2px);
+    }
 
-#scrollTopBtn:active {
-  transform: scale(0.94);
-}
+    #scrollTopBtn:active {
+      transform: scale(0.94);
+    }
   </style>
 </head>
 <body>
@@ -277,7 +271,6 @@
     <div class="subtitle">年代別パーソナル年表・ライフログマネージャー</div>
   </header>
 
-  <!-- 基本情報入力カード -->
   <section class="card input-section">
     <div class="form-row">
       <div class="form-group">
@@ -293,12 +286,9 @@
     </div>
   </section>
 
-  <!-- 写真連携カード（初期非表示） -->
+  <!-- 写真連携カード -->
   <section class="card" id="photoSection" style="display: none;">
-    <div class="form-row" style="align-items: center; justify-content: space-between; margin-bottom: 12px;">
-      <span style="font-size: 0.9rem; font-weight: bold; color: var(--text-muted);">📷 撮影日時から該当年を自動検索</span>
-      <button id="googlePhotosBtn" class="btn btn-google">Google フォトから選択</button>
-    </div>
+    <div style="font-size: 0.9rem; font-weight: bold; color: var(--text-muted); margin-bottom: 8px;">📷 撮影日時から該当年を自動検索</div>
     <div id="dropZone" class="drop-zone">
       ローカル写真をここにドラッグ＆ドロップ、またはクリックして選択（Exif解析）
     </div>
@@ -306,7 +296,7 @@
     <div id="photoResult" class="photo-result"></div>
   </section>
 
-  <!-- 操作アクションバー（初期非表示） -->
+  <!-- 操作アクションバー -->
   <div class="action-bar" id="actionBar" style="display: none;">
     <button id="saveBtn" class="btn">💾 一時保存</button>
     <button id="exportCsvBtn" class="btn btn-success">📥 CSV出力</button>
@@ -316,7 +306,7 @@
   </div>
   <input type="file" id="csvFileInput" accept=".csv" style="display: none;">
 
-  <!-- 年表テーブル表示カード（初期非表示） -->
+  <!-- 年表テーブル -->
   <section class="table-container" id="tableSection" style="display: none;">
     <table>
       <thead>
@@ -333,7 +323,6 @@
   </section>
 </div>
 
-<!-- トップに戻るボタン -->
 <button id="scrollTopBtn" title="トップへ戻る" aria-label="トップへ戻る">
   <svg viewBox="0 0 24 24">
     <polyline points="18 15 12 9 6 15"></polyline>
@@ -341,17 +330,8 @@
 </button>
 
 <script>
-  // ====== Google API 設定 ======
-  const CLIENT_ID = '37823403561-e1ng2rda4doi2np86fmaidn0afl2cpnq.apps.googleusercontent.com';
-  const API_KEY = 'AIzaSyD_hh82gKjAFmrIVKT1nlD2-vQpKzWtH_c';
-  const PROJECT_NUMBER = '37823403561';
-
-  const SCOPES = 'https://www.googleapis.com/auth/drive.readonly https://www.googleapis.com/auth/drive.file';
-
-  let tokenClient;
-  let accessToken = null;
-  let pickerInited = false;
-  let gisInited = false;
+  // ====== 中継用 GAS Web App URL ======
+  const GAS_API_URL = "ここにデプロイしたWebアプリURLを貼り付け";
 
   const historicalNews = {
     1964: "東京オリンピック開催、東海道新幹線開業",
@@ -404,7 +384,6 @@
   const exportCsvBtn = document.getElementById("exportCsvBtn");
   const driveBackupBtn = document.getElementById("driveBackupBtn");
   const clearBtn = document.getElementById("clearBtn");
-  const googlePhotosBtn = document.getElementById("googlePhotosBtn");
   const scrollTopBtn = document.getElementById("scrollTopBtn");
 
   const CURRENT_YEAR = new Date().getFullYear();
@@ -424,16 +403,9 @@
         console.error("データ復元エラー:", e);
       }
     }
-
-    const checkGoogleLoaded = setInterval(() => {
-      if (window.google && window.gapi) {
-        clearInterval(checkGoogleLoaded);
-        initGoogleApis();
-      }
-    }, 100);
   });
 
-  // スクロール検知で「トップに戻る」ボタンの表示切替
+  // トップに戻るボタン制御
   window.addEventListener("scroll", () => {
     if (window.scrollY > 250) {
       scrollTopBtn.classList.add("visible");
@@ -442,92 +414,9 @@
     }
   });
 
-  // トップに戻る
   scrollTopBtn.addEventListener("click", () => {
     window.scrollTo({ top: 0, behavior: "smooth" });
   });
-
-  function initGoogleApis() {
-    gapi.load('picker', () => {
-      pickerInited = true;
-    });
-
-    tokenClient = google.accounts.oauth2.initTokenClient({
-      client_id: CLIENT_ID,
-      scope: SCOPES,
-      callback: '',
-    });
-    gisInited = true;
-  }
-
-  function getAccessToken(callback) {
-    if (!gisInited) {
-      alert("Google APIを読み込み中です。数秒待ってから再試行してください。");
-      return;
-    }
-    tokenClient.callback = async (response) => {
-      if (response.error !== undefined) {
-        console.error("Auth error:", response);
-        alert("認証エラーが発生しました: " + response.error);
-        return;
-      }
-      accessToken = response.access_token;
-      callback(accessToken);
-    };
-    tokenClient.requestAccessToken({ prompt: '' });
-  }
-
-  // Googleフォト選択
-  googlePhotosBtn.addEventListener("click", () => {
-    if (!pickerInited) {
-      alert("Google APIを読み込み中です。数秒待ってから再試行してください。");
-      return;
-    }
-    getAccessToken(() => {
-      try {
-        createPicker();
-      } catch (err) {
-        console.error("Picker creation error:", err);
-        alert("ピッカーの起動に失敗しました。");
-      }
-    });
-  });
-
-  function createPicker() {
-    const view = new google.picker.DocsView(google.picker.ViewId.DOCS_IMAGES)
-      .setMimeTypes("image/png,image/jpeg,image/jpg,image/webp");
-
-    const picker = new google.picker.PickerBuilder()
-      .enableFeature(google.picker.Feature.NAV_HIDDEN)
-      .setAppId(PROJECT_NUMBER)
-      .setOrigin(window.location.protocol + '//' + window.location.host)
-      .setOAuthToken(accessToken)
-      .addView(view)
-      .setDeveloperKey(API_KEY)
-      .setCallback(pickerCallback)
-      .build();
-    picker.setVisible(true);
-  }
-
-  function pickerCallback(data) {
-    if (data.action === google.picker.Action.PICKED) {
-      const doc = data.docs[0];
-      const timestamp = doc.uploadDate || doc.date || (doc.lastEditedUtc ? parseInt(doc.lastEditedUtc, 10) : null);
-      if (timestamp) {
-        const dt = new Date(parseInt(timestamp, 10));
-        const photoYear = dt.getFullYear();
-        const dateStr = `${photoYear}年${dt.getMonth() + 1}月${dt.getDate()}日`;
-
-        photoResult.style.display = "block";
-        photoResult.innerHTML = `<strong>Googleフォトから選択:</strong> ${dateStr} の写真を検出しました。<br>該当行へスクロールしました。「旅行・イベント」列に入力してください。`;
-
-        highlightAndScrollToYear(photoYear);
-      } else {
-        photoResult.style.display = "block";
-        photoResult.textContent = "写真の日時情報を取得できませんでした。";
-      }
-    }
-  }
 
   function highlightAndScrollToYear(photoYear) {
     const targetRow = document.getElementById(`row-${photoYear}`);
@@ -545,7 +434,7 @@
     }
   }
 
-  // 入力欄の変更監視（即時保存とテーブル同期）
+  // 入力欄の同期
   userNameInput.addEventListener("input", saveToLocalStorage);
   birthDateInput.addEventListener("change", () => {
     saveToLocalStorage();
@@ -555,7 +444,7 @@
     }
   });
 
-  // 年表生成ボタン
+  // 年表生成
   generateBtn.addEventListener("click", () => {
     const birthVal = birthDateInput.value;
     if (!birthVal) {
@@ -566,7 +455,6 @@
     saveToLocalStorage();
   });
 
-  // テーブル描画
   function renderTable(birthVal, savedRecords = null) {
     const birth = new Date(birthVal);
     const birthYear = birth.getFullYear();
@@ -625,7 +513,6 @@
       tdNews.contentEditable = "true";
       tdNews.innerText = newsText;
 
-      // セル入力時に自動一時保存
       [tdCareer, tdEvents, tdNews].forEach(td => {
         td.addEventListener("input", saveToLocalStorage);
       });
@@ -644,7 +531,7 @@
     tableSection.style.display = "block";
   }
 
-  // 写真ローカルドロップ処理
+  // 写真Exif解析
   dropZone.addEventListener("click", () => fileInput.click());
   dropZone.addEventListener("dragover", (e) => {
     e.preventDefault();
@@ -703,7 +590,6 @@
     localStorage.setItem("my_chronicle_data", JSON.stringify(data));
   }
 
-  // テーブルデータ抽出（改行を保持する innerText を使用）
   function extractTableData() {
     const rows = tableBody.querySelectorAll("tr");
     const data = [];
@@ -719,7 +605,6 @@
     return data;
   }
 
-  // CSV出力文字列生成（セル内改行を保持するRFC 4180標準準拠）
   function generateCsvContent() {
     const records = extractTableData();
     const name = userNameInput.value || "";
@@ -753,7 +638,7 @@
     URL.revokeObjectURL(url);
   });
 
-  // CSVインポートボタン連動
+  // CSVインポート
   importCsvBtn.addEventListener("click", () => csvFileInput.click());
   if (initImportCsvBtn) {
     initImportCsvBtn.addEventListener("click", () => csvFileInput.click());
@@ -772,7 +657,6 @@
     reader.readAsText(file, "UTF-8");
   });
 
-  // RFC 4180準拠のCSVパーサー（セル内改行に対応）
   function parseCSV(text) {
     const rows = [];
     let currentRow = [];
@@ -780,7 +664,6 @@
     let insideQuotes = false;
     let i = 0;
 
-    // BOM削除
     if (text.charCodeAt(0) === 0xFEFF) {
       text = text.slice(1);
     }
@@ -837,13 +720,11 @@
     return rows;
   }
 
-  // CSVインポート処理
   function parseAndApplyCsv(csvText) {
     const rawLines = csvText.split(/\r\n|\n/);
     let parsedName = "";
     let parsedBirthDate = "";
 
-    // 1行目のメタデータ判定
     if (rawLines.length > 0 && rawLines[0].trim().startsWith("#")) {
       const metaLine = rawLines[0].trim();
       const nameMatch = metaLine.match(/Name:\s*([^,]*)/);
@@ -856,7 +737,6 @@
     if (parsedName) userNameInput.value = parsedName;
     if (parsedBirthDate) birthDateInput.value = parsedBirthDate;
 
-    // 全文をパース
     const rows = parseCSV(csvText);
     if (rows.length < 2) {
       alert("有効なCSVデータではありません。");
@@ -865,7 +745,6 @@
 
     const records = [];
     rows.forEach(row => {
-      // メタデータ行・ヘッダー行をスキップ
       if (row[0].startsWith("#") || row[0] === "西暦") return;
       if (row.length < 5) return;
 
@@ -897,108 +776,57 @@
     alert("CSVから年表データを復元しました。");
   }
 
-  // Google ドライブ自動バックアップ
-  driveBackupBtn.addEventListener("click", () => {
+  // ====== GAS経由のGoogleドライブ自動保存 ======
+  driveBackupBtn.addEventListener("click", async () => {
     const records = extractTableData();
     if (records.length === 0) {
       alert("保存する年表データがありません。");
       return;
     }
 
-    getAccessToken(async (token) => {
-      driveBackupBtn.disabled = true;
-      driveBackupBtn.textContent = "☁️ ドライブ保存中...";
+    if (!GAS_API_URL || GAS_API_URL.includes("ここにデプロイした")) {
+      alert("GAS_API_URL が設定されていません。GASのデプロイURLを入力してください。");
+      return;
+    }
 
-      try {
-        const folderId = await getOrCreateToolsFolder(token);
+    driveBackupBtn.disabled = true;
+    driveBackupBtn.textContent = "☁️ ドライブ保存中...";
 
-        const now = new Date();
-        const yyyy = now.getFullYear();
-        const mm = String(now.getMonth() + 1).padStart(2, '0');
-        const dd = String(now.getDate()).padStart(2, '0');
-        const fileName = `mychronicle_${yyyy}${mm}${dd}.csv`;
+    try {
+      const now = new Date();
+      const yyyy = now.getFullYear();
+      const mm = String(now.getMonth() + 1).padStart(2, '0');
+      const dd = String(now.getDate()).padStart(2, '0');
+      const fileName = `mychronicle_${yyyy}${mm}${dd}.csv`;
+      const csvContent = generateCsvContent();
 
-        const csvContent = generateCsvContent();
-        await uploadCsvToDrive(token, folderId, fileName, csvContent);
+      // GAS Web App へ POST 送信
+      const response = await fetch(GAS_API_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "text/plain;charset=utf-8"
+        },
+        body: JSON.stringify({
+          fileName: fileName,
+          content: csvContent
+        })
+      });
 
+      const resData = await response.json();
+
+      if (resData.status === "success") {
         alert(`Googleドライブへ保存しました:\nマイドライブ/90_Tools/${fileName}`);
-      } catch (err) {
-        console.error("Drive backup error:", err);
-        alert("ドライブ保存に失敗しました: " + (err.message || err));
-      } finally {
-        driveBackupBtn.disabled = false;
-        driveBackupBtn.textContent = "☁️ ドライブ保存";
+      } else {
+        throw new Error(resData.message || "Unknown error");
       }
-    });
+    } catch (err) {
+      console.error("Drive backup error:", err);
+      alert("ドライブ保存に失敗しました: " + (err.message || err));
+    } finally {
+      driveBackupBtn.disabled = false;
+      driveBackupBtn.textContent = "☁️ ドライブ保存";
+    }
   });
-
-  async function getOrCreateToolsFolder(token) {
-    const query = "name = '90_Tools' and mimeType = 'application/vnd.google-apps.folder' and trashed = false and 'root' in parents";
-    const searchUrl = `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(query)}&fields=files(id,name)`;
-
-    const res = await fetch(searchUrl, {
-      headers: { Authorization: `Bearer ${token}` }
-    });
-    const data = await res.json();
-
-    if (data.files && data.files.length > 0) {
-      return data.files[0].id;
-    }
-
-    const createUrl = 'https://www.googleapis.com/drive/v3/files';
-    const meta = {
-      name: '90_Tools',
-      mimeType: 'application/vnd.google-apps.folder',
-      parents: ['root']
-    };
-
-    const createRes = await fetch(createUrl, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(meta)
-    });
-    const newFolder = await createRes.json();
-    return newFolder.id;
-  }
-
-  async function uploadCsvToDrive(token, folderId, fileName, csvContent) {
-    const metadata = {
-      name: fileName,
-      parents: [folderId],
-      mimeType: 'text/csv'
-    };
-
-    const boundary = '-------314159265358979323846';
-    const delimiter = `\r\n--${boundary}\r\n`;
-    const closeDelimiter = `\r\n--${boundary}--`;
-
-    const multipartRequestBody =
-      delimiter +
-      'Content-Type: application/json; charset=UTF-8\r\n\r\n' +
-      JSON.stringify(metadata) +
-      delimiter +
-      'Content-Type: text/csv; charset=UTF-8\r\n\r\n' +
-      csvContent +
-      closeDelimiter;
-
-    const uploadUrl = 'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart';
-    const res = await fetch(uploadUrl, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': `multipart/related; boundary=${boundary}`
-      },
-      body: multipartRequestBody
-    });
-
-    if (!res.ok) {
-      const errorJson = await res.json();
-      throw new Error(errorJson.error?.message || "Upload failed");
-    }
-  }
 
   // リセット
   clearBtn.addEventListener("click", () => {
@@ -1008,3 +836,5 @@
     }
   });
 </script>
+</body>
+</html>
