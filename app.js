@@ -193,6 +193,16 @@ function highlightAndScrollToYear(photoYear) {
   }
 }
 
+// 入力欄の変更を即座に反映・一時保存
+userNameInput.addEventListener("input", saveToLocalStorage);
+birthDateInput.addEventListener("change", () => {
+  saveToLocalStorage();
+  const records = extractTableData();
+  if (records.length > 0) {
+    renderTable(birthDateInput.value, records);
+  }
+});
+
 // 年表生成ボタン
 generateBtn.addEventListener("click", () => {
   const birthVal = birthDateInput.value;
