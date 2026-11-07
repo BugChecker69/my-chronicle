@@ -49,6 +49,7 @@ const historicalNews = {
 const userNameInput = document.getElementById("userName");
 const birthDateInput = document.getElementById("birthDate");
 const generateBtn = document.getElementById("generateBtn");
+const initImportCsvBtn = document.getElementById("initImportCsvBtn");
 const photoSection = document.getElementById("photoSection");
 const actionBar = document.getElementById("actionBar");
 const tableSection = document.getElementById("tableSection");
@@ -343,6 +344,9 @@ exportCsvBtn.addEventListener("click", () => {
 
 // CSVインポート（読込）
 importCsvBtn.addEventListener("click", () => csvFileInput.click());
+if (initImportCsvBtn) {
+  initImportCsvBtn.addEventListener("click", () => csvFileInput.click()); // ← この行を追加
+}
 csvFileInput.addEventListener("change", (e) => {
   const file = e.target.files[0];
   if (!file) return;
