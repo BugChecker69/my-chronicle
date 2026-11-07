@@ -313,10 +313,16 @@ function saveToLocalStorage() {
   localStorage.setItem("my_chronicle_data", JSON.stringify(data));
 }
 
-// CSV出力文字列の生成
+// CSV出力文字列の生成（メタデータ埋め込み対応）
 function generateCsvContent() {
   const records = extractTableData();
-  let csv = "\uFEFF西暦,年齢,学歴・職歴,旅行・イベント,日本・海外のニュース\n";
+  const name = userNameInput.value || "";
+  const birthDate = birthDateInput.value || "";
+
+  // 1行目にメタデータ（氏名・生年月日）、2行目にデータヘッダー
+  let csv = `\uFEFF# Name: ${name}, BirthDate: ${birthDate}\n`;
+  csv += "西暦,年齢,学歴・職歴,旅行・イベント,日本・海外のニュース\n";
+
   records.forEach(r => {
     const row = [
       `"${r.year}"`,
@@ -342,30 +348,78 @@ exportCsvBtn.addEventListener("click", () => {
   URL.revokeObjectURL(url);
 });
 
-// CSVインポート（読込）
-importCsvBtn.addEventListener("click", () => csvFileInput.click());
-if (initImportCsvBtn) {
-  initImportCsvBtn.addEventListener("click", () => csvFileInput.click()); // ← この行を追加
-}
-csvFileInput.addEventListener("change", (e) => {
-  const file = e.target.files[0];
-  if (!file) return;
-
-  const reader = new FileReader();
-  reader.onload = (event) => {
-    const text = event.target.result;
-    parseAndApplyCsv(text);
-    csvFileInput.value = "";
-  };
-  reader.readAsText(file, "UTF-8");
-});
-
+// CSVインポート（メタデータ復元対応）
 function parseAndApplyCsv(csvText) {
   const lines = csvText.split(/\r\n|\n/).filter(line => line.trim() !== "");
   if (lines.length < 2) {
     alert("有効なCSVデータではありません。");
     return;
   }
+
+  let dataStartIndex = 1;
+  let parsedName = "";
+  let parsedBirthDate = "";
+
+  // 1行目がメタデータ行（#から始まる）か判定
+  const firstLine = lines[0].trim();
+  if (firstLine.startsWith("#")) {
+    const nameMatch = firstLine.match(/Name:\s*([^,]*)/);
+    const birthMatch = firstLine.match(/BirthDate:\s*([^,\r\n]*)/);
+
+    if (nameMatch && nameMatch[1]) parsedName = nameMatch[1].trim();
+    if (birthMatch && birthMatch[1]) parsedBirthDate = birthMatch[1].trim();
+
+    // 2行目がテーブルヘッダーになるため、データ行の開始インデックスを2にする
+    dataStartIndex = 2;
+  }
+
+  // 氏名・生年月日の反映
+  if (parsedName) {
+    userNameInput.value = parsedName;
+  }
+  if (parsedBirthDate) {
+    birthDateInput.value = parsedBirthDate;
+  }
+
+  // テーブルデータのパース
+  const records = [];
+  for (let i = dataStartIndex; i < lines.length; i++) {
+    const match = lines[i].match(/(?:^|,)("(?:[^"]|"")*"|[^,]*)/g);
+    if (!match || match.length < 5) continue;
+
+    const row = match.map(val => {
+      let v = val.replace(/^,/, '').trim();
+      if (v.startsWith('"') && v.endsWith('"')) {
+        v = v.substring(1, v.length - 1).replace(/""/g, '"');
+      }
+      return v;
+    });
+
+    records.push({
+      year: parseInt(row[0], 10),
+      age: row[1],
+      career: row[2],
+      events: row[3],
+      news: row[4]
+    });
+  }
+
+  if (records.length === 0 || isNaN(records[0].year)) {
+    alert("年表データの抽出に失敗しました。");
+    return;
+  }
+
+  // 生年月日の最終決定
+  let birthVal = birthDateInput.value;
+  if (!birthVal) {
+    birthVal = `${records[0].year}-01-01`;
+    birthDateInput.value = birthVal;
+  }
+
+  renderTable(birthVal, records);
+  saveToLocalStorage();
+  alert("CSVから氏名・生年月日・年表データを復元しました。");
+}
 
   // 1行目はヘッダーとしてスキップ
   const records = [];
