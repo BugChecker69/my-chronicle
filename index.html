@@ -800,17 +800,21 @@
       const fileName = `mychronicle_${yyyy}${mm}${dd}.csv`;
       const csvContent = generateCsvContent();
 
-      // GAS Web App へ POST 送信
+// GAS Web App へ POST 送信
       const response = await fetch(GAS_API_URL, {
         method: "POST",
+        mode: "no-cors", // CORS制約を回避
         headers: {
-          "Content-Type": "text/plain;charset=utf-8"
+          "Content-Type": "application/x-www-form-urlencoded"
         },
         body: JSON.stringify({
           fileName: fileName,
           content: csvContent
         })
       });
+
+      // no-cors モードではレスポンス内容を直接読めないため、エラーがスローされずにここに来れば送信成功
+      alert(`Googleドライブへ保存リクエストを送信しました:\nマイドライブ/90_Tools/${fileName}`);
 
       const resData = await response.json();
 
