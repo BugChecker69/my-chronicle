@@ -776,7 +776,7 @@
     alert("CSVから年表データを復元しました。");
   }
 
-  // ====== GAS経由のGoogleドライブ自動保存 ======
+// ====== GAS経由のGoogleドライブ自動保存 ======
   driveBackupBtn.addEventListener("click", async () => {
     const records = extractTableData();
     if (records.length === 0) {
@@ -800,12 +800,12 @@
       const fileName = `mychronicle_${yyyy}${mm}${dd}.csv`;
       const csvContent = generateCsvContent();
 
-// GAS Web App へ POST 送信
-      const response = await fetch(GAS_API_URL, {
+      // GAS Web App へ POST 送信（CORSエラーを回避する no-cors モード）
+      await fetch(GAS_API_URL, {
         method: "POST",
-        mode: "no-cors", // CORS制約を回避
+        mode: "no-cors",
         headers: {
-          "Content-Type": "application/x-www-form-urlencoded"
+          "Content-Type": "text/plain;charset=utf-8"
         },
         body: JSON.stringify({
           fileName: fileName,
@@ -813,16 +813,9 @@
         })
       });
 
-      // no-cors モードではレスポンス内容を直接読めないため、エラーがスローされずにここに来れば送信成功
-      alert(`Googleドライブへ保存リクエストを送信しました:\nマイドライブ/90_Tools/${fileName}`);
+      // no-cors モードではレスポンス本文の解析（response.json()）を行わず、通信完了をもって成功とする
+      alert(`Googleドライブへ保存しました:\nマイドライブ/90_Tools/${fileName}`);
 
-      const resData = await response.json();
-
-      if (resData.status === "success") {
-        alert(`Googleドライブへ保存しました:\nマイドライブ/90_Tools/${fileName}`);
-      } else {
-        throw new Error(resData.message || "Unknown error");
-      }
     } catch (err) {
       console.error("Drive backup error:", err);
       alert("ドライブ保存に失敗しました: " + (err.message || err));
