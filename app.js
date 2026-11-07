@@ -348,6 +348,25 @@ exportCsvBtn.addEventListener("click", () => {
   URL.revokeObjectURL(url);
 });
 
+// CSVインポート（読込ボタンのイベントリスナー）
+importCsvBtn.addEventListener("click", () => csvFileInput.click());
+if (initImportCsvBtn) {
+  initImportCsvBtn.addEventListener("click", () => csvFileInput.click());
+}
+
+csvFileInput.addEventListener("change", (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = (event) => {
+    const text = event.target.result;
+    parseAndApplyCsv(text);
+    csvFileInput.value = "";
+  };
+  reader.readAsText(file, "UTF-8");
+});
+
 // CSVインポート（メタデータ復元対応）
 function parseAndApplyCsv(csvText) {
   const lines = csvText.split(/\r\n|\n/).filter(line => line.trim() !== "");
@@ -419,48 +438,6 @@ function parseAndApplyCsv(csvText) {
   renderTable(birthVal, records);
   saveToLocalStorage();
   alert("CSVから氏名・生年月日・年表データを復元しました。");
-}
-
-  // 1行目はヘッダーとしてスキップ
-  const records = [];
-  for (let i = 1; i < lines.length; i++) {
-    // 簡易CSVパース（ダブルクォート対応）
-    const match = lines[i].match(/(?:^|,)("(?:[^"]|"")*"|[^,]*)/g);
-    if (!match || match.length < 5) continue;
-
-    const row = match.map(val => {
-      let v = val.replace(/^,/, '').trim();
-      if (v.startsWith('"') && v.endsWith('"')) {
-        v = v.substring(1, v.length - 1).replace(/""/g, '"');
-      }
-      return v;
-    });
-
-    records.push({
-      year: parseInt(row[0], 10),
-      age: row[1],
-      career: row[2],
-      events: row[3],
-      news: row[4]
-    });
-  }
-
-  if (records.length === 0 || isNaN(records[0].year)) {
-    alert("年表データの抽出に失敗しました。");
-    return;
-  }
-
-  // 生年特定と再描画
-  const firstYear = records[0].year;
-  let birthVal = birthDateInput.value;
-  if (!birthVal) {
-    birthVal = `${firstYear}-01-01`;
-    birthDateInput.value = birthVal;
-  }
-
-  renderTable(birthVal, records);
-  saveToLocalStorage();
-  alert("CSVから年表データを復元しました。");
 }
 
 // ====== Google ドライブ自動バックアップ連携 ======
